@@ -29,6 +29,14 @@ impl Polynomial {
             .into()
     }
 
+    pub fn div_rem(&self, rhs: &Polynomial) -> (Polynomial, Polynomial) {
+        match rhs.grade() {
+            -1 => panic!("Division by 0"),
+            0 => horner_div(self, -rhs[0]),
+            _ => todo!("Implement long division"),
+        }
+    }
+
     fn coef_ref(&self, i: i32) -> Option<&f64> {
         self.0.get(i as usize).or_else(|| {
             if i == 0 && self.grade() == -1 {
@@ -135,4 +143,19 @@ fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String
     }
 
     Some(ret)
+}
+
+fn horner_div(p: &Polynomial, a: f64) -> (Polynomial, Polynomial) {
+    let len = p.0.len();
+    let mut res = vec![0.; len];
+    res[len - 1] = p[(len - 1) as i32];
+
+    (0..len - 1)
+        .rev()
+        .for_each(|k| res[k] = a * res[k + 1] + p[k as i32]);
+
+    res.rotate_left(1);
+    let rem = res.pop().unwrap();
+
+    (Polynomial::from(res), Polynomial::from(vec![rem]))
 }
