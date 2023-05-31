@@ -1,10 +1,12 @@
-#![feature(unboxed_closures, fn_traits)]
+#![feature(unboxed_closures, fn_traits, iter_intersperse)]
 
 mod polynomial;
+mod roots;
 
 use anyhow::Result;
 use atty::Stream;
 use polynomial::Polynomial;
+use roots::{find_roots, Roots};
 use std::{env, io, io::prelude::*};
 
 fn parse_roots<T: AsRef<str>>(iter: impl DoubleEndedIterator<Item = T>) -> Result<Vec<f64>> {
@@ -14,7 +16,7 @@ fn parse_roots<T: AsRef<str>>(iter: impl DoubleEndedIterator<Item = T>) -> Resul
 }
 
 fn interactive_prompt(stdin: &mut io::Stdin, stdout: &mut io::Stdout) -> Result<Vec<f64>> {
-    println!("Welcome to the polynomial roots calculator!");
+    println!("Welcome to the polynomial real roots calculator!");
     println!("Please type in the coefficients, from the highest to the lowest monomial. Press Enter when ready.");
     print!("> ");
     stdout.flush()?;
@@ -46,10 +48,30 @@ fn main() -> Result<()> {
 
     let p: Polynomial = roots.into();
     let d = p.derivative();
-    let v = 1.;
 
-    println!("Polynomial: {p}; p({v}) = {}", p(v));
-    println!("Derivative: {d}; d({v}) = {}", d(v));
+    println!("Polynomial: {p}");
+    println!("Derivative: {d}");
+
+    match find_roots(&p) {
+        Roots::All => println!("Real roots: all real numbers"),
+        Roots::None => println!("Real roots: none"),
+        Roots::Some(roots) => println!(
+            "Real roots: {}.",
+            roots
+                .into_iter()
+                .map(|r| format!(
+                    "{}{}",
+                    r.value,
+                    if r.multiplicity > 1 {
+                        format!(" (mul. {})", r.multiplicity)
+                    } else {
+                        "".into()
+                    }
+                ))
+                .intersperse(", ".into())
+                .collect::<String>()
+        ),
+    }
 
     Ok(())
 }
