@@ -7,14 +7,15 @@ use atty::Stream;
 use polynomial::Polynomial;
 use std::{env, io, io::prelude::*};
 
-fn parse_roots<T: AsRef<str>>(iter: impl Iterator<Item = T>) -> Result<Vec<f64>> {
+fn parse_roots<T: AsRef<str>>(iter: impl DoubleEndedIterator<Item = T>) -> Result<Vec<f64>> {
     iter.map(|v| v.as_ref().parse().map_err(anyhow::Error::new))
+        .rev()
         .collect()
 }
 
 fn interactive_prompt(stdin: &mut io::Stdin, stdout: &mut io::Stdout) -> Result<Vec<f64>> {
     println!("Welcome to the polynomial roots calculator!");
-    println!("Please type in the coefficients, ordered by the power of the monomials. Press Enter when ready.");
+    println!("Please type in the coefficients, from the highest to the lowest monomial. Press Enter when ready.");
     print!("> ");
     stdout.flush()?;
 
