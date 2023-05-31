@@ -45,15 +45,11 @@ fn main() -> Result<()> {
     }
 
     let p: Polynomial = roots.into();
-    let a: Polynomial = vec![1., 2., 3.].into();
+    let d = p.derivative();
+    let v = 1.;
 
-    println!("a == p: {}", a == p);
-    println!("p == ZERO: {}", p == Polynomial::ZERO);
+    println!("Polynomial: {p}; p({v}) = {}", p(v));
+    println!("Derivative: {d}; d({v}) = {}", d(v));
 
-    Ok(println!(
-        "Your polynomial is: {}; evaluates to {} for x = 5; first coefficient is {:?}",
-        p,
-        p(5.0),
-        p.coef(0),
-    ))
+    Ok(())
 }

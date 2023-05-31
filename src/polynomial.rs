@@ -21,6 +21,14 @@ impl Polynomial {
         self.coef_ref(i).copied()
     }
 
+    pub fn derivative(&self) -> Polynomial {
+        self.iter()
+            .skip(1)
+            .map(|(i, v)| (i as f64) * v)
+            .collect::<Vec<_>>()
+            .into()
+    }
+
     fn coef_ref(&self, i: i32) -> Option<&f64> {
         self.0.get(i as usize).or_else(|| {
             if i == 0 && self.grade() == -1 {
