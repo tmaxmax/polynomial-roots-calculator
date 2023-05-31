@@ -117,10 +117,11 @@ fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String
 
     let mut ret = String::new();
 
-    if (pow > 0 && v != 1.0) || pow == 0 {
-        if !first && v >= 0. {
-            ret += "+";
-        }
+    if !first && v >= 0. {
+        ret += "+";
+    }
+
+    if v != 1.0 {
         ret += v.to_string().as_ref();
     }
 
