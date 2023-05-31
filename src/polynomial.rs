@@ -94,16 +94,15 @@ impl fmt::Display for Polynomial {
 
         let s = self
             .iter()
-            .flat_map(|(i, v)| format_coefficient(v, i, "x"))
+            .flat_map(|(i, v)| format_coefficient(v, i, "x", i == self.grade()))
             .rev()
-            .intersperse("+".into())
             .collect::<String>();
 
         f.write_str(&s)
     }
 }
 
-fn format_coefficient(v: f64, pow: i32, var: &str) -> Option<String> {
+fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String> {
     if v == 0.0 {
         return None;
     }
@@ -111,6 +110,9 @@ fn format_coefficient(v: f64, pow: i32, var: &str) -> Option<String> {
     let mut ret = String::new();
 
     if (pow > 0 && v != 1.0) || pow == 0 {
+        if !first && v >= 0. {
+            ret += "+";
+        }
         ret += v.to_string().as_ref();
     }
 

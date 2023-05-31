@@ -1,4 +1,4 @@
-#![feature(unboxed_closures, fn_traits, iter_intersperse)]
+#![feature(unboxed_closures, fn_traits)]
 
 mod polynomial;
 
