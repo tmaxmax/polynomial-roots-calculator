@@ -224,5 +224,5 @@ fn get_roots_palindrome(p: &Polynomial) -> Option<Roots> {
 }
 
 fn approximate_roots(_p: &Polynomial) -> Roots {
-    todo!();
+    todo!("roots approximation algorithm");
 }
