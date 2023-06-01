@@ -129,7 +129,7 @@ fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String
         ret += "+";
     }
 
-    if v != 1.0 {
+    if v != 1.0 || pow == 0 {
         ret += v.to_string().as_ref();
     }
 
