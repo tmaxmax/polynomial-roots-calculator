@@ -46,7 +46,7 @@ impl Polynomial {
     fn evaluate(&self, v: f64) -> f64 {
         match self.grade() {
             -1 => 0.,
-            _ => self.0[0] + self.iter().skip(1).rev().fold(0.0, |a, (_, c)| v * (a + c)),
+            _ => self.0[0] + self.iter().skip(1).rev().fold(0., |a, (_, c)| v * (a + c)),
         }
     }
 }
