@@ -107,7 +107,7 @@ fn get_roots_biquadratic(p: &Polynomial) -> Option<Roots> {
         return None;
     }
 
-    let bp = Polynomial::from(vec![p[0], p[2], p[4]]);
+    let bp: Polynomial = [p[0], p[2], p[4]].into();
 
     return Some(match get_roots_order_two(&bp) {
         Roots::Some(roots) => Roots::Some(get_all_roots(roots)),
