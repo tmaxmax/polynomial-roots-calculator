@@ -17,10 +17,6 @@ impl Polynomial {
         (self.0.len() as i32) - 1
     }
 
-    pub fn coef(&self, i: i32) -> Option<f64> {
-        self.coef_ref(i).copied()
-    }
-
     pub fn derivative(&self) -> Polynomial {
         self.iter()
             .skip(1)
