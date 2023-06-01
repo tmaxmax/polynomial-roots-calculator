@@ -1,3 +1,4 @@
+use crate::float::Float;
 use crate::polynomial::Polynomial;
 use std::cmp::Ordering;
 
@@ -22,17 +23,9 @@ pub fn find_roots(p: &Polynomial) -> Roots {
     }
 }
 
-fn negate(f: f64) -> f64 {
-    if f == 0. {
-        0.
-    } else {
-        -f
-    }
-}
-
 fn get_roots_order_one(p: &Polynomial) -> Roots {
     Roots::Some(vec![Root {
-        value: negate(p[0]) / p[1],
+        value: p[0].negate() / p[1],
         multiplicity: 1,
     }])
 }
@@ -81,7 +74,7 @@ fn get_roots_binomial(p: &Polynomial) -> Option<Roots> {
         return None;
     }
 
-    let abs = (negate(first) / last).abs().powf(1. / (grade as f64));
+    let abs = (-first / last).abs().powf(1. / (grade as f64));
     let init_phi = (-first.signum()).acos();
 
     let root_values = (0..grade)
@@ -90,7 +83,7 @@ fn get_roots_binomial(p: &Polynomial) -> Option<Roots> {
             let cos = phi.cos();
             let sin = phi.sin();
 
-            if sin.abs() > 1e-15 {
+            if sin.abs().near_zero() {
                 return None;
             }
 

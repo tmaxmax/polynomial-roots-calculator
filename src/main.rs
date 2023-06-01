@@ -1,5 +1,6 @@
 #![feature(unboxed_closures, fn_traits, iter_intersperse)]
 
+mod float;
 mod polynomial;
 mod roots;
 
