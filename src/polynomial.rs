@@ -28,7 +28,8 @@ impl Polynomial {
     pub fn div_rem(&self, rhs: &Polynomial) -> (Polynomial, Polynomial) {
         match rhs.grade() {
             -1 => panic!("Division by 0"),
-            0 => horner_div(self, -rhs[0]),
+            0 => (const_div(self, rhs[0]), Self::ZERO),
+            1 => horner_div(self, rhs),
             _ => todo!("Implement long division"),
         }
     }
@@ -146,10 +147,16 @@ fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String
     Some(ret)
 }
 
-fn horner_div(p: &Polynomial, a: f64) -> (Polynomial, Polynomial) {
+fn const_div(p: &Polynomial, a: f64) -> Polynomial {
+    p.iter().map(|(_, v)| v / a).collect::<Vec<_>>().into()
+}
+
+fn horner_div(p: &Polynomial, rhs: &Polynomial) -> (Polynomial, Polynomial) {
     let len = p.0.len();
     let mut res = vec![0.; len];
     res[len - 1] = p[(len - 1) as i32];
+
+    let a = -rhs[0] / rhs[1];
 
     (0..len - 1)
         .rev()
@@ -158,5 +165,21 @@ fn horner_div(p: &Polynomial, a: f64) -> (Polynomial, Polynomial) {
     res.rotate_left(1);
     let rem = res.pop().unwrap();
 
-    (Polynomial::from(res), Polynomial::from(vec![rem]))
+    if rhs[1] != 1. {
+        res.iter_mut().for_each(|v| *v /= rhs[1]);
+    }
+
+    (res.into(), [rem].into())
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_horner() {
+        use super::*;
+
+        let (res, rem) = horner_div(&[2., 1., -2., 8.].into(), &[-1., 2.].into());
+        assert_eq!(res, [1., 1., 4.].into());
+        assert_eq!(rem[0], 3.);
+    }
 }
