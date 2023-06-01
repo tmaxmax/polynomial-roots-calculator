@@ -152,8 +152,75 @@ fn get_roots_biquadratic(p: &Polynomial) -> Option<Roots> {
     }
 }
 
-fn get_roots_palindrome(_p: &Polynomial) -> Option<Roots> {
-    todo!();
+fn get_roots_palindrome(p: &Polynomial) -> Option<Roots> {
+    return match p.grade() {
+        3 if is_palindrome(p) => {
+            let (res, rem) = p.div_rem(&[1., 1.].into());
+            assert_eq!(res.grade(), 2);
+            assert_eq!(rem.grade(), -1);
+
+            Some(match get_roots_order_two(p) {
+                roots @ Roots::Some(_) => roots.append(Root {
+                    value: -1.,
+                    multiplicity: 1,
+                }),
+                _ => Roots::None,
+            })
+        }
+        4 => get_roots_quartic_quasi_palindrome(p),
+        g if g % 2 == 1 => {
+            let (res, rem) = p.div_rem(&[1., 1.].into());
+            assert_eq!(rem.grade(), -1);
+
+            if res.grade() > 4 {
+                return None;
+            }
+
+            Some(get_roots_general(&res).append(Root {
+                value: -1.,
+                multiplicity: 1,
+            }))
+        }
+        _ => None,
+    };
+
+    fn is_palindrome(p: &Polynomial) -> bool {
+        p.iter().all(|(i, v)| v == p[p.grade() - i])
+    }
+
+    fn get_roots_quartic_quasi_palindrome(p: &Polynomial) -> Option<Roots> {
+        let m = (p[0] / p[4]).sqrt();
+        let m2 = p[1] / p[3];
+
+        if m != m2 {
+            return None;
+        }
+
+        let Roots::Some(quadratic_roots) =
+            get_roots_order_two(&[p[2] - 2. * p[4] * m, p[3], p[4]].into()) else { return Some(Roots::None); };
+
+        let roots = quadratic_roots
+            .into_iter()
+            .flat_map(|r| {
+                let Roots::Some(mut roots) = get_roots_order_two(&[m, -r.value, 1.].into()) else {
+                    return None;
+                };
+
+                roots
+                    .iter_mut()
+                    .for_each(|qr| qr.multiplicity *= r.multiplicity);
+
+                Some(roots)
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+        if roots.is_empty() {
+            return Some(Roots::None);
+        }
+
+        Some(Roots::Some(roots))
+    }
 }
 
 fn approximate_roots(_p: &Polynomial) -> Roots {
