@@ -168,7 +168,7 @@ fn get_roots_palindrome(p: &Polynomial) -> Option<Roots> {
             })
         }
         4 => get_roots_quartic_quasi_palindrome(p),
-        g if g % 2 == 1 => {
+        g if g % 2 == 1 && is_palindrome(p) => {
             let (res, rem) = p.div_rem(&[1., 1.].into());
             assert_eq!(rem.grade(), -1);
 
