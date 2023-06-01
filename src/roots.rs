@@ -64,68 +64,31 @@ fn get_roots_order_two(p: &Polynomial) -> Roots {
 }
 
 fn get_roots_general(p: &Polynomial) -> Roots {
-    if let Some(b) = get_binomial(p) {
-        return get_roots_binomial(b);
-    }
-
-    if let Some(q) = get_biquadratic(p) {
-        if let Roots::Some(roots) = get_roots_order_two(&q) {
-            return Roots::Some(
-                roots
-                    .into_iter()
-                    .flat_map(gen_roots_biquadratic)
-                    .flatten()
-                    .collect(),
-            );
-        }
-    }
-
-    approximate_roots(p)
+    get_roots_biquadratic(p)
+        .or_else(|| get_roots_binomial(p))
+        .or_else(|| get_roots_palindrome(p))
+        .unwrap_or_else(|| approximate_roots(p))
 }
 
-fn approximate_roots(_p: &Polynomial) -> Roots {
-    // TODO: Implement root finding algorithm.
-    Roots::None
-}
+fn get_roots_binomial(p: &Polynomial) -> Option<Roots> {
+    use std::f64::consts::PI;
 
-#[derive(Debug)]
-struct Binomial {
-    grade: i32,
-    coefs: (f64, f64),
-}
-
-fn get_binomial(p: &Polynomial) -> Option<Binomial> {
     let grade = p.grade();
     let first = p[0];
     let last = p[grade];
 
-    if (1..p.grade()).map(|i| p[i]).any(|v| v != 0.) {
+    if (1..grade).map(|i| p[i]).any(|v| v != 0.) {
         return None;
     }
 
-    Some(Binomial {
-        grade,
-        coefs: (first, last),
-    })
-}
+    let abs = (negate(first) / last).abs().powf(1. / (grade as f64));
+    let init_phi = (-first.signum()).acos();
 
-fn get_roots_binomial(b: Binomial) -> Roots {
-    use std::f64::consts::PI;
-
-    let abs = (negate(b.coefs.0) / b.coefs.1)
-        .abs()
-        .powf(1. / (b.grade as f64));
-    let init_phi = (-b.coefs.0.signum()).acos();
-
-    println!("b={b:?} phi={init_phi}");
-
-    let root_values = (0..b.grade)
+    let root_values = (0..grade)
         .flat_map(|k| {
-            let phi = (init_phi + PI * (2 * k) as f64) / b.grade as f64;
+            let phi = (init_phi + PI * (2 * k) as f64) / grade as f64;
             let cos = phi.cos();
             let sin = phi.sin();
-
-            println!("{k}: phi={phi} cos={cos} sin={sin}");
 
             if sin.abs() > 1e-15 {
                 return None;
@@ -133,45 +96,60 @@ fn get_roots_binomial(b: Binomial) -> Roots {
 
             Some(abs * cos)
         })
+        .map(|value| Root {
+            value,
+            multiplicity: 1,
+        })
         .collect::<Vec<_>>();
 
     if root_values.is_empty() {
-        return Roots::None;
+        return Some(Roots::None);
     }
 
-    let mut roots: Vec<Root> = vec![];
-
-    for value in root_values {
-        if let Some(root) = roots.iter_mut().find(|r| r.value == value) {
-            root.multiplicity += 1;
-        } else {
-            roots.push(Root {
-                value,
-                multiplicity: 1,
-            })
-        }
-    }
-
-    Roots::Some(roots)
+    Some(Roots::Some(root_values))
 }
 
-fn get_biquadratic(p: &Polynomial) -> Option<Polynomial> {
+fn get_roots_biquadratic(p: &Polynomial) -> Option<Roots> {
     if p.grade() != 4 || p[1] != 0. || p[3] != 0. {
         return None;
     }
 
-    Some(Polynomial::from(vec![p[0], p[2], p[4]]))
+    let bp = Polynomial::from(vec![p[0], p[2], p[4]]);
+
+    return Some(match get_roots_order_two(&bp) {
+        Roots::Some(roots) => Roots::Some(get_all_roots(roots)),
+        _ => Roots::None,
+    });
+
+    fn get_all_roots(quadratic_roots: Vec<Root>) -> Vec<Root> {
+        quadratic_roots
+            .into_iter()
+            .flat_map(|r| {
+                if r.value >= 0. {
+                    let sqrt = r.value.sqrt();
+
+                    return Some(
+                        [-sqrt, sqrt]
+                            .into_iter()
+                            .skip(if r.value > 0. { 0 } else { 1 })
+                            .map(move |value| Root {
+                                value,
+                                multiplicity: r.multiplicity,
+                            }),
+                    );
+                }
+
+                None
+            })
+            .flatten()
+            .collect()
+    }
 }
 
-fn gen_roots_biquadratic(r: Root) -> Option<impl Iterator<Item = Root>> {
-    if r.value >= 0. {
-        let sqrt = r.value.sqrt();
+fn get_roots_palindrome(_p: &Polynomial) -> Option<Roots> {
+    todo!();
+}
 
-        return Some([-sqrt, sqrt].into_iter().map(move |value| Root {
-            value,
-            multiplicity: r.multiplicity,
-        }));
-    }
-
-    None
+fn approximate_roots(_p: &Polynomial) -> Roots {
+    todo!();
 }
