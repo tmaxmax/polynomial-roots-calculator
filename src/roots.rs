@@ -13,6 +13,19 @@ pub enum Roots {
     None,
 }
 
+impl Roots {
+    fn append(self, r: Root) -> Self {
+        match self {
+            Self::All => self,
+            Self::Some(mut roots) => {
+                roots.push(r);
+                Self::Some(roots)
+            }
+            Self::None => Self::Some(vec![r]),
+        }
+    }
+}
+
 pub fn find_roots(p: &Polynomial) -> Roots {
     match p.grade() {
         -1 => Roots::All,
