@@ -83,7 +83,7 @@ fn get_roots_binomial(p: &Polynomial) -> Option<Roots> {
     let first = p[0];
     let last = p[grade];
 
-    if (1..grade).map(|i| p[i]).any(|v| v != 0.) {
+    if (1..grade).any(|i| p[i] != 0.) {
         return None;
     }
 
@@ -93,14 +93,8 @@ fn get_roots_binomial(p: &Polynomial) -> Option<Roots> {
     let root_values = (0..grade)
         .flat_map(|k| {
             let phi = (init_phi + PI * (2 * k) as f64) / grade as f64;
-            let cos = phi.cos();
-            let sin = phi.sin();
 
-            if sin.abs().near_zero() {
-                return None;
-            }
-
-            Some(abs * cos)
+            phi.sin().abs().near_zero().then(|| abs * phi.cos())
         })
         .map(|value| Root {
             value,
