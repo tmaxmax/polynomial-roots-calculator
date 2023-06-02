@@ -59,10 +59,10 @@ impl Default for Polynomial {
 
 impl<T> From<T> for Polynomial
 where
-    T: AsRef<[f64]>,
+    T: Into<Vec<f64>>,
 {
     fn from(value: T) -> Self {
-        let v = value.as_ref();
+        let v: Vec<_> = value.into();
 
         if v.len() > i32::MAX as usize {
             panic!("Too many coefficients");
@@ -72,7 +72,7 @@ where
             return Self::ZERO;
         }
 
-        Polynomial(v.into())
+        Polynomial(v)
     }
 }
 
