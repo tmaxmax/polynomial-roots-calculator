@@ -34,6 +34,10 @@ impl Polynomial {
         }
     }
 
+    pub fn is_palindrome(&self) -> bool {
+        self.iter().all(|(i, v)| v == self[self.grade() - i])
+    }
+
     fn coef_ref(&self, i: i32) -> Option<&f64> {
         self.0.get(i as usize).or_else(|| {
             if i == 0 && self.grade() == -1 {

@@ -108,7 +108,7 @@ fn get_roots_biquadratic(p: &Polynomial) -> Option<Vec<Root>> {
 
 fn get_roots_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
     return match p.grade() {
-        g if g % 2 == 1 && is_palindrome(p) => {
+        g if g % 2 == 1 && p.is_palindrome() => {
             let mut roots = find_roots(&p.div_rem(&[1., 1.].into()).0)?;
             if let Some(root) = roots.iter_mut().find(|r| r.value == -1.) {
                 root.multiplicity += 1
@@ -124,10 +124,6 @@ fn get_roots_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
         4 => get_roots_quartic_quasi_palindrome(p),
         _ => None,
     };
-
-    fn is_palindrome(p: &Polynomial) -> bool {
-        p.iter().all(|(i, v)| v == p[p.grade() - i])
-    }
 
     fn get_roots_quartic_quasi_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
         let m = (p[0] / p[4]).sqrt();
