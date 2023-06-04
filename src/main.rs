@@ -11,7 +11,7 @@ use std::{
     io::{self, prelude::*, IsTerminal},
 };
 
-fn parse_roots<T: AsRef<str>>(iter: impl DoubleEndedIterator<Item = T>) -> Result<Vec<f64>> {
+fn parse_coefs(iter: impl DoubleEndedIterator<Item = impl AsRef<str>>) -> Result<Vec<f64>> {
     iter.map(|v| v.as_ref().parse().map_err(anyhow::Error::new))
         .rev()
         .collect()
@@ -21,7 +21,7 @@ fn parse_stdin(stdin: &mut io::StdinLock) -> Result<Vec<f64>> {
     let mut buf = String::new();
     stdin.read_to_string(&mut buf)?;
 
-    parse_roots(buf.split_whitespace())
+    parse_coefs(buf.split_whitespace())
 }
 
 fn interactive_prompt(stdin: &mut io::StdinLock, stdout: &mut io::StdoutLock) -> Result<()> {
@@ -42,7 +42,7 @@ fn interactive_prompt(stdin: &mut io::StdinLock, stdout: &mut io::StdoutLock) ->
             return Ok(());
         }
 
-        let coefs = match parse_roots(input.split_whitespace()) {
+        let coefs = match parse_coefs(input.split_whitespace()) {
             Ok(res) => res,
             Err(_) => {
                 writeln!(stdout, "\nInvalid input, please try again.")?;
@@ -95,17 +95,17 @@ fn format_output_noninteractive(roots: &Roots) -> String {
 fn main() -> Result<()> {
     let args = env::args();
 
-    let roots;
+    let coefs;
     if args.len() > 1 {
-        roots = parse_roots(args.skip(1))?;
+        coefs = parse_coefs(args.skip(1))?;
     } else if !io::stdin().is_terminal() {
-        roots = parse_stdin(&mut io::stdin().lock())?;
+        coefs = parse_stdin(&mut io::stdin().lock())?;
     } else {
         return interactive_prompt(&mut io::stdin().lock(), &mut io::stdout().lock());
     }
 
     Ok(println!(
         "{}",
-        format_output_noninteractive(&find_roots(&roots.into()))
+        format_output_noninteractive(&find_roots(&coefs.into()))
     ))
 }
