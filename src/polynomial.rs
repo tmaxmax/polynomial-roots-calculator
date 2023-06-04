@@ -7,7 +7,7 @@ use std::{
 pub struct Polynomial(Vec<f64>);
 
 impl Polynomial {
-    pub const ZERO: Polynomial = Polynomial(vec![]);
+    pub const ZERO: Self = Self(vec![]);
 
     pub fn iter(&self) -> impl ExactSizeIterator + DoubleEndedIterator<Item = (i32, f64)> + '_ {
         self.0.iter().enumerate().map(|(i, &v)| (i as i32, v))
@@ -17,7 +17,7 @@ impl Polynomial {
         (self.0.len() as i32) - 1
     }
 
-    pub fn derivative(&self) -> Polynomial {
+    pub fn derivative(&self) -> Self {
         self.iter()
             .skip(1)
             .map(|(i, v)| (i as f64) * v)
@@ -25,7 +25,7 @@ impl Polynomial {
             .into()
     }
 
-    pub fn div_rem(&self, rhs: &Polynomial) -> (Polynomial, Polynomial) {
+    pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
         match rhs.grade() {
             -1 => panic!("Division by 0"),
             0 => (const_div(self, rhs[0]), Self::ZERO),
@@ -76,7 +76,7 @@ where
             return Self::ZERO;
         }
 
-        Polynomial(v)
+        Self(v)
     }
 }
 
