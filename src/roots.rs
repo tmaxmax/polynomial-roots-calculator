@@ -7,54 +7,35 @@ pub struct Root {
     pub multiplicity: i32,
 }
 
-pub enum Roots {
-    All,
-    Some(Vec<Root>),
-    None,
-}
-
-impl Roots {
-    fn append(self, r: Root) -> Self {
-        match self {
-            Self::All => self,
-            Self::Some(mut roots) => {
-                roots.push(r);
-                Self::Some(roots)
-            }
-            Self::None => Self::Some(vec![r]),
-        }
-    }
-}
-
-pub fn find_roots(p: &Polynomial) -> Roots {
+pub fn find_roots(p: &Polynomial) -> Option<Vec<Root>> {
     match p.grade() {
-        -1 => Roots::All,
-        0 => Roots::None,
-        1 => get_roots_order_one(p),
-        2 => get_roots_order_two(p),
-        _ => get_roots_general(p),
+        -1 => None,
+        0 => Some(vec![]),
+        1 => Some(get_roots_order_one(p)),
+        2 => Some(get_roots_order_two(p)),
+        _ => Some(get_roots_general(p)),
     }
 }
 
-fn get_roots_order_one(p: &Polynomial) -> Roots {
-    Roots::Some(vec![Root {
+fn get_roots_order_one(p: &Polynomial) -> Vec<Root> {
+    vec![Root {
         value: p[0].negate() / p[1],
         multiplicity: 1,
-    }])
+    }]
 }
 
-fn get_roots_order_two(p: &Polynomial) -> Roots {
+fn get_roots_order_two(p: &Polynomial) -> Vec<Root> {
     let two_a = 2. * p[2];
     let delta = p[1] * p[1] - 2. * two_a * p[0];
 
     match delta.partial_cmp(&0.) {
         Some(o) => match o {
-            Ordering::Less => Roots::None,
-            Ordering::Equal => Roots::Some(vec![Root {
+            Ordering::Less => vec![],
+            Ordering::Equal => vec![Root {
                 value: -p[1] / two_a,
                 multiplicity: 2,
-            }]),
-            Ordering::Greater => Roots::Some(vec![
+            }],
+            Ordering::Greater => vec![
                 Root {
                     value: (-p[1] - delta.sqrt()) / two_a,
                     multiplicity: 1,
@@ -63,20 +44,20 @@ fn get_roots_order_two(p: &Polynomial) -> Roots {
                     value: (-p[1] + delta.sqrt()) / two_a,
                     multiplicity: 1,
                 },
-            ]),
+            ],
         },
-        None => Roots::None,
+        None => vec![],
     }
 }
 
-fn get_roots_general(p: &Polynomial) -> Roots {
+fn get_roots_general(p: &Polynomial) -> Vec<Root> {
     get_roots_biquadratic(p)
         .or_else(|| get_roots_binomial(p))
         .or_else(|| get_roots_palindrome(p))
         .unwrap_or_else(|| approximate_roots(p))
 }
 
-fn get_roots_binomial(p: &Polynomial) -> Option<Roots> {
+fn get_roots_binomial(p: &Polynomial) -> Option<Vec<Root>> {
     use std::f64::consts::PI;
 
     let grade = p.grade();
@@ -102,78 +83,68 @@ fn get_roots_binomial(p: &Polynomial) -> Option<Roots> {
         })
         .collect::<Vec<_>>();
 
-    if root_values.is_empty() {
-        return Some(Roots::None);
-    }
-
-    Some(Roots::Some(root_values))
+    Some(root_values)
 }
 
-fn get_roots_biquadratic(p: &Polynomial) -> Option<Roots> {
+fn get_roots_biquadratic(p: &Polynomial) -> Option<Vec<Root>> {
     if p.grade() != 4 || p[1] != 0. || p[3] != 0. {
         return None;
     }
 
-    let bp: Polynomial = [p[0], p[2], p[4]].into();
+    let roots = get_roots_order_two(&[p[0], p[2], p[4]].into())
+        .into_iter()
+        .flat_map(|r| {
+            if r.value >= 0. {
+                let sqrt = r.value.sqrt();
 
-    return Some(match get_roots_order_two(&bp) {
-        Roots::Some(roots) => Roots::Some(get_all_roots(roots)),
-        _ => Roots::None,
-    });
+                return Some(
+                    [-sqrt, sqrt]
+                        .into_iter()
+                        .skip(if r.value > 0. { 0 } else { 1 })
+                        .map(move |value| Root {
+                            value,
+                            multiplicity: r.multiplicity,
+                        }),
+                );
+            }
 
-    fn get_all_roots(quadratic_roots: Vec<Root>) -> Vec<Root> {
-        quadratic_roots
-            .into_iter()
-            .flat_map(|r| {
-                if r.value >= 0. {
-                    let sqrt = r.value.sqrt();
+            None
+        })
+        .flatten()
+        .collect();
 
-                    return Some(
-                        [-sqrt, sqrt]
-                            .into_iter()
-                            .skip(if r.value > 0. { 0 } else { 1 })
-                            .map(move |value| Root {
-                                value,
-                                multiplicity: r.multiplicity,
-                            }),
-                    );
-                }
-
-                None
-            })
-            .flatten()
-            .collect()
-    }
+    Some(roots)
 }
 
-fn get_roots_palindrome(p: &Polynomial) -> Option<Roots> {
+fn get_roots_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
     return match p.grade() {
         3 if is_palindrome(p) => {
             let (res, rem) = p.div_rem(&[1., 1.].into());
             assert_eq!(res.grade(), 2);
             assert_eq!(rem.grade(), -1);
 
-            Some(match get_roots_order_two(p) {
-                roots @ Roots::Some(_) => roots.append(Root {
-                    value: -1.,
-                    multiplicity: 1,
-                }),
-                _ => Roots::None,
-            })
+            let mut roots = get_roots_order_two(p);
+            roots.push(Root {
+                value: -1.,
+                multiplicity: 1,
+            });
+
+            Some(roots)
         }
         4 => get_roots_quartic_quasi_palindrome(p),
         g if g % 2 == 1 && is_palindrome(p) => {
             let (res, rem) = p.div_rem(&[1., 1.].into());
             assert_eq!(rem.grade(), -1);
 
-            if res.grade() > 4 {
-                return None;
-            }
+            (res.grade() <= 4).then(|| {
+                let mut roots = get_roots_general(&res);
+                roots.push(Root {
+                    value: -1.,
+                    multiplicity: 1,
+                });
 
-            Some(get_roots_general(&res).append(Root {
-                value: -1.,
-                multiplicity: 1,
-            }))
+                roots
+            })
         }
         _ => None,
     };
@@ -182,7 +153,7 @@ fn get_roots_palindrome(p: &Polynomial) -> Option<Roots> {
         p.iter().all(|(i, v)| v == p[p.grade() - i])
     }
 
-    fn get_roots_quartic_quasi_palindrome(p: &Polynomial) -> Option<Roots> {
+    fn get_roots_quartic_quasi_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
         let m = (p[0] / p[4]).sqrt();
         let m2 = p[1] / p[3];
 
@@ -190,33 +161,25 @@ fn get_roots_palindrome(p: &Polynomial) -> Option<Roots> {
             return None;
         }
 
-        let Roots::Some(quadratic_roots) =
-            get_roots_order_two(&[p[2] - 2. * p[4] * m, p[3], p[4]].into()) else { return Some(Roots::None); };
+        let quadratic_roots = get_roots_order_two(&[p[2] - 2. * p[4] * m, p[3], p[4]].into());
 
         let roots = quadratic_roots
             .into_iter()
             .flat_map(|r| {
-                let Roots::Some(mut roots) = get_roots_order_two(&[m, -r.value, 1.].into()) else {
-                    return None;
-                };
+                let mut roots = get_roots_order_two(&[m, -r.value, 1.].into());
 
                 roots
                     .iter_mut()
                     .for_each(|qr| qr.multiplicity *= r.multiplicity);
 
-                Some(roots)
+                roots
             })
-            .flatten()
             .collect::<Vec<_>>();
 
-        if roots.is_empty() {
-            return Some(Roots::None);
-        }
-
-        Some(Roots::Some(roots))
+        Some(roots)
     }
 }
 
-fn approximate_roots(_p: &Polynomial) -> Roots {
+fn approximate_roots(_p: &Polynomial) -> Vec<Root> {
     todo!("roots approximation algorithm");
 }

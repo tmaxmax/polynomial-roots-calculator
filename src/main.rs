@@ -5,7 +5,7 @@ mod polynomial;
 mod roots;
 
 use anyhow::Result;
-use roots::{find_roots, Roots};
+use roots::{find_roots, Root};
 use std::{
     env,
     io::{self, prelude::*, IsTerminal},
@@ -53,16 +53,16 @@ fn interactive_prompt(stdin: &mut io::StdinLock, stdout: &mut io::StdoutLock) ->
         writeln!(
             stdout,
             "{}\nInput coefficients or \"exit\" to close the program.",
-            format_output_interactive(&find_roots(&coefs.into()))
+            format_output_interactive(find_roots(&coefs.into()).as_deref())
         )?;
     }
 }
 
-fn format_output_interactive(roots: &Roots) -> String {
+fn format_output_interactive(roots: Option<&[Root]>) -> String {
     match roots {
-        Roots::All => "Real roots: all real numbers".into(),
-        Roots::None => "Real roots: none".into(),
-        Roots::Some(roots) => roots
+        None => "Real roots: zero polynomial".into(),
+        Some([]) => "Real roots: none".into(),
+        Some(roots) => roots
             .iter()
             .map(|r| {
                 format!(
@@ -80,11 +80,11 @@ fn format_output_interactive(roots: &Roots) -> String {
     }
 }
 
-fn format_output_noninteractive(roots: &Roots) -> String {
+fn format_output_noninteractive(roots: Option<&[Root]>) -> String {
     match roots {
-        Roots::None => "none".into(),
-        Roots::All => "all".into(),
-        Roots::Some(roots) => roots
+        None => "zero".into(),
+        Some([]) => "none".into(),
+        Some(roots) => roots
             .iter()
             .map(|r| format!("{}:{}", r.value, r.multiplicity))
             .intersperse(" ".into())
@@ -106,6 +106,6 @@ fn main() -> Result<()> {
 
     Ok(println!(
         "{}",
-        format_output_noninteractive(&find_roots(&coefs.into()))
+        format_output_noninteractive(find_roots(&coefs.into()).as_deref())
     ))
 }
