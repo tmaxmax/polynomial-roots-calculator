@@ -1,0 +1,5 @@
+[toolchain]
+# Note: pin this to a specific version when the project is left for a while.
+channel = "nightly"
+profile = "default"
+components = ["rust-analyzer"]
