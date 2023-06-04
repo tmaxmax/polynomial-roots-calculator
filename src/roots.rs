@@ -157,26 +157,20 @@ fn get_roots_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
         let m = (p[0] / p[4]).sqrt();
         let m2 = p[1] / p[3];
 
-        if m != m2 {
-            return None;
-        }
+        (m == m2).then(|| {
+            get_roots_order_two(&[p[2] - 2. * p[4] * m, p[3], p[4]].into())
+                .into_iter()
+                .flat_map(|r| {
+                    let mut roots = get_roots_order_two(&[m, -r.value, 1.].into());
 
-        let quadratic_roots = get_roots_order_two(&[p[2] - 2. * p[4] * m, p[3], p[4]].into());
+                    roots
+                        .iter_mut()
+                        .for_each(|qr| qr.multiplicity *= r.multiplicity);
 
-        let roots = quadratic_roots
-            .into_iter()
-            .flat_map(|r| {
-                let mut roots = get_roots_order_two(&[m, -r.value, 1.].into());
-
-                roots
-                    .iter_mut()
-                    .for_each(|qr| qr.multiplicity *= r.multiplicity);
-
-                roots
-            })
-            .collect::<Vec<_>>();
-
-        Some(roots)
+                    roots
+                })
+                .collect()
+        })
     }
 }
 
