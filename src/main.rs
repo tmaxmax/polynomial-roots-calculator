@@ -52,7 +52,7 @@ fn interactive_prompt(stdin: &mut io::StdinLock, stdout: &mut io::StdoutLock) ->
 
         writeln!(
             stdout,
-            "{}\nInput coefficients or \"exit\" to close the program.",
+            "{}\n\nInput coefficients or \"exit\" to close the program.",
             format_output_interactive(find_roots(&coefs.into()).as_deref())
         )?;
     }
