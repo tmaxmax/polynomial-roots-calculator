@@ -110,10 +110,14 @@ fn get_roots_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
     return match p.grade() {
         g if g % 2 == 1 && is_palindrome(p) => {
             let mut roots = find_roots(&p.div_rem(&[1., 1.].into()).0)?;
-            roots.push(Root {
-                value: -1.,
-                multiplicity: 1,
-            });
+            if let Some(root) = roots.iter_mut().find(|r| r.value == -1.) {
+                root.multiplicity += 1
+            } else {
+                roots.push(Root {
+                    value: -1.,
+                    multiplicity: 1,
+                });
+            }
 
             Some(roots)
         }
