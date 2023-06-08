@@ -1,5 +1,4 @@
 use std::{
-    cmp::Ordering,
     error::Error,
     fmt::{self, Write},
     ops::Index,
