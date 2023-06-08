@@ -7,8 +7,6 @@ use std::{
 
 use num_rational::{BigRational, Rational32};
 
-use crate::float::Float;
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial(Vec<f64>);
 
