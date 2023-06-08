@@ -3,6 +3,8 @@ use std::{
     ops::{self, Add, Sub},
 };
 
+use crate::float::Float;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial(Vec<f64>);
 
@@ -26,10 +28,6 @@ impl Polynomial {
     }
 
     pub fn div_rem(mut self, rhs: &Self) -> (Self, Self) {
-        if self.grade() == -1 {
-            return (self, Self::ZERO);
-        }
-
         match rhs.grade() {
             -1 => panic!("Division by 0"),
             0 => {
@@ -40,7 +38,7 @@ impl Polynomial {
                 let (res, rem) = horner_div(self, rhs);
                 (res, if rem == 0. { Self::ZERO } else { [rem].into() })
             }
-            _ => todo!("Implement long division"),
+            _ => long_div(self, rhs),
         }
     }
 
@@ -289,6 +287,36 @@ fn horner_div(mut lhs: Polynomial, rhs: &Polynomial) -> (Polynomial, f64) {
     (lhs, rem)
 }
 
+fn long_div(mut lhs: Polynomial, rhs: &Polynomial) -> (Polynomial, Polynomial) {
+    let init_grade = lhs.grade();
+    if init_grade < rhs.grade() {
+        return (Polynomial::ZERO, lhs);
+    }
+
+    let res_g = (init_grade - rhs.grade()) as usize;
+    let mut res = vec![0.; res_g + 1];
+
+    while lhs.grade() >= rhs.grade() {
+        let l_g = lhs.grade() as usize;
+        let r_g = rhs.grade() as usize;
+        let c = lhs.0[l_g] / rhs.0[r_g];
+
+        (0..=r_g).for_each(|k| lhs.0[l_g - k] -= c * rhs.0[r_g - k]);
+
+        while let Some(v) = lhs.0.last() {
+            if !v.near_zero() {
+                break;
+            }
+
+            lhs.0.pop();
+        }
+
+        res[res_g - (init_grade as usize - l_g)] = c;
+    }
+
+    (res.into(), lhs)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -298,6 +326,21 @@ mod tests {
         let (res, rem) = horner_div([2., 1., -2., 8.].into(), &[-1., 2.].into());
         assert_eq!(res, [1., 1., 4.].into());
         assert_eq!(rem, 3.);
+    }
+
+    #[test]
+    fn test_long_div() {
+        let (res, rem) = long_div([2., 1., 0., 2., 1.].into(), &[1., 1., 1.].into());
+        assert_eq!(res, [-2., 1., 1.].into());
+        assert_eq!(rem, [4., 2.].into());
+
+        let (res, rem) = long_div([1., 0., 1., 0., 1., 1.].into(), &[1., 0., 1.].into());
+        assert_eq!(res, [0., -1., 1., 1.].into());
+        assert_eq!(rem, [1., 1.].into());
+
+        let (res, rem) = long_div([1., 2., 3., 2., 1.].into(), &[1., 1., 1.].into());
+        assert_eq!(res, [1., 1., 1.].into());
+        assert_eq!(rem, Polynomial::ZERO);
     }
 
     #[test]
