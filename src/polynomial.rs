@@ -1,7 +1,11 @@
 use std::{
+    cmp::Ordering,
+    error::Error,
     fmt::{self, Write},
     ops::{Add, Index, Neg, Sub},
 };
+
+use num_rational::{BigRational, Rational32};
 
 use crate::float::Float;
 
@@ -27,18 +31,19 @@ impl Polynomial {
             .into()
     }
 
-    pub fn div_rem(mut self, rhs: &Self) -> (Self, Self) {
+    pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
         match rhs.grade() {
             -1 => panic!("Division by 0"),
             0 => {
-                const_div(&mut self, rhs[0]);
-                (self, Self::ZERO)
+                let mut res = self.clone();
+                const_div(&mut res, rhs[0]);
+
+                (res, Self::ZERO)
             }
-            1 => {
-                let (res, rem) = horner_div(self, rhs);
-                (res, if rem == 0. { Self::ZERO } else { [rem].into() })
+            _ => {
+                let (res, rem) = div(self.to_ratios(), &rhs.to_ratios());
+                (Polynomial::from_ratios(&res), Polynomial::from_ratios(&rem))
             }
-            _ => long_div(self, rhs),
         }
     }
 
@@ -58,7 +63,7 @@ impl Polynomial {
             (0, 0) => Self::ZERO,
             (_, 0) => self.clone(),
             (0, _) => rhs.clone(),
-            _ => gcd(self.clone(), rhs.clone()),
+            _ => Self::from_ratios(&gcd(self.to_ratios(), rhs.to_ratios())),
         }
     }
 
@@ -66,11 +71,13 @@ impl Polynomial {
         match self.grade() {
             -1 | 0 => self.clone(),
             _ => {
-                self.clone()
-                    .div_rem(&gcd(self.clone(), self.derivative()).primitive().0)
-                    .0
-                    .primitive()
-                    .0
+                let s = self.to_ratios();
+                let g = gcd(s.clone(), self.derivative().to_ratios());
+
+                let mut res = long_div(s, &g).0;
+                primitive(&mut res);
+
+                Polynomial::from_ratios(&res)
             }
         }
     }
@@ -93,6 +100,27 @@ impl Polynomial {
             -1 => 0.,
             _ => self.0[0] + self.iter().skip(1).rev().fold(0., |a, (_, c)| v * (a + c)),
         }
+    }
+
+    fn to_ratios(&self) -> Vec<Rational32> {
+        self.0
+            .iter()
+            .map(|&v| -> Result<_, Box<dyn Error>> {
+                let r = BigRational::from_float(v).expect("float must be finite");
+                let n: i32 = r.numer().try_into()?;
+                let d: i32 = r.denom().try_into()?;
+
+                Ok(Rational32::new(n, d))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap()
+    }
+
+    fn from_ratios(r: &[Rational32]) -> Self {
+        r.iter()
+            .map(|v| *v.numer() as f64 / *v.denom() as f64)
+            .collect::<Vec<_>>()
+            .into()
     }
 }
 
@@ -320,71 +348,118 @@ fn const_div(lhs: &mut Polynomial, a: f64) {
     lhs.0.iter_mut().for_each(|v| *v /= a);
 }
 
-fn horner_div(mut lhs: Polynomial, rhs: &Polynomial) -> (Polynomial, f64) {
+fn horner_div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, Rational32) {
     let a = -rhs[0] / rhs[1];
 
-    (0..lhs.0.len() - 1)
-        .rev()
-        .for_each(|k| lhs.0[k] += a * lhs.0[k + 1]);
+    (0..lhs.len() - 1).rev().for_each(|k| {
+        let prev = lhs[k + 1];
+        lhs[k] += a * prev;
+    });
 
-    lhs.0.rotate_left(1);
-    let rem = lhs.0.pop().unwrap();
+    lhs.rotate_left(1);
+    let rem = lhs.pop().unwrap();
 
-    if rhs[1] != 1. {
-        lhs.0.iter_mut().for_each(|v| *v /= rhs[1]);
+    if rhs[1] != Rational32::new(1, 1) {
+        lhs.iter_mut().for_each(|v| *v /= rhs[1]);
     }
 
     (lhs, rem)
 }
 
-fn long_div(mut lhs: Polynomial, rhs: &Polynomial) -> (Polynomial, Polynomial) {
-    let init_grade = lhs.grade();
-    if init_grade < rhs.grade() {
-        return (Polynomial::ZERO, lhs);
+fn long_div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, Vec<Rational32>) {
+    let init_l_grade = lhs.len() - 1;
+    let init_r_grade = rhs.len() - 1;
+    if init_l_grade < init_r_grade {
+        return (vec![], lhs);
     }
 
-    let res_g = (init_grade - rhs.grade()) as usize;
-    let mut res = vec![0.; res_g + 1];
+    let res_g = init_l_grade - init_r_grade;
+    let mut res = vec![Rational32::default(); res_g + 1];
 
-    while lhs.grade() >= rhs.grade() {
-        let l_g = lhs.grade() as usize;
-        let r_g = rhs.grade() as usize;
-        let a = lhs.0[l_g];
-        let b = rhs.0[r_g];
-        let c = a / b;
+    while lhs.len() >= rhs.len() {
+        let l_g = lhs.len() - 1;
+        let r_g = rhs.len() - 1;
+        let c = lhs[l_g] / rhs[r_g];
 
-        (0..=r_g).for_each(|k| lhs.0[l_g - k] -= a * rhs.0[r_g - k] / b);
+        (0..=r_g).for_each(|k| lhs[l_g - k] -= c * rhs[r_g - k]);
 
-        while let Some(v) = lhs.0.last() {
-            if !v.near_zero() {
+        while let Some(v) = lhs.last() {
+            if *v != Rational32::default() {
                 break;
             }
 
-            lhs.0.pop();
+            lhs.pop();
         }
 
-        res[res_g - (init_grade as usize - l_g)] = c;
+        res[res_g - (init_l_grade - l_g)] = c;
     }
 
-    (res.into(), lhs)
+    (res, lhs)
 }
 
-fn gcd(mut r0: Polynomial, mut r1: Polynomial) -> Polynomial {
-    if r0.grade() < r1.grade() {
+fn div(lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, Vec<Rational32>) {
+    match lhs.len() {
+        0 | 1 => unreachable!(),
+        2 => {
+            let (res, rem) = horner_div(lhs, rhs);
+            (
+                res,
+                if rem == Rational32::default() {
+                    vec![]
+                } else {
+                    vec![rem]
+                },
+            )
+        }
+        _ => long_div(lhs, rhs),
+    }
+}
+
+fn gcd(mut r0: Vec<Rational32>, mut r1: Vec<Rational32>) -> Vec<Rational32> {
+    if r0.len() < r1.len() {
         std::mem::swap(&mut r0, &mut r1);
     }
 
-    while r1 != Polynomial::ZERO {
-        let (_, rem) = r0.div_rem(&r1);
+    while !r1.is_empty() {
+        let (_, rem) = div(r0, &r1);
         r0 = r1;
         r1 = rem;
     }
 
-    if r0.lead() < 0. {
-        r0 = -r0;
+    r0
+}
+
+fn primitive(v: &mut [Rational32]) -> Rational32 {
+    let mut d = v.iter().fold(Rational32::default(), |acc, &v| gcd(acc, v));
+    if sgn(v.last().unwrap()) * sgn(&d) < 0 {
+        d = -d;
     }
 
-    r0
+    v.iter_mut().for_each(|v| *v /= d);
+
+    return d;
+
+    fn gcd(mut a: Rational32, mut b: Rational32) -> Rational32 {
+        if a < b {
+            std::mem::swap(&mut a, &mut b);
+        }
+
+        while b != Rational32::default() {
+            let rem = a % b;
+            a = b;
+            b = rem;
+        }
+
+        a
+    }
+
+    fn sgn(r: &Rational32) -> i32 {
+        match r.cmp(&Rational32::default()) {
+            Ordering::Less => -1,
+            Ordering::Equal => 0,
+            Ordering::Greater => 1,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -393,22 +468,22 @@ mod tests {
 
     #[test]
     fn test_horner() {
-        let (res, rem) = horner_div([2., 1., -2., 8.].into(), &[-1., 2.].into());
+        let (res, rem) = Polynomial::from([2., 1., -2., 8.]).div_rem(&[-1., 2.].into());
         assert_eq!(res, [1., 1., 4.].into());
-        assert_eq!(rem, 3.);
+        assert_eq!(rem, [3.].into());
     }
 
     #[test]
     fn test_long_div() {
-        let (res, rem) = long_div([2., 1., 0., 2., 1.].into(), &[1., 1., 1.].into());
+        let (res, rem) = Polynomial::from([2., 1., 0., 2., 1.]).div_rem(&[1., 1., 1.].into());
         assert_eq!(res, [-2., 1., 1.].into());
         assert_eq!(rem, [4., 2.].into());
 
-        let (res, rem) = long_div([1., 0., 1., 0., 1., 1.].into(), &[1., 0., 1.].into());
+        let (res, rem) = Polynomial::from([1., 0., 1., 0., 1., 1.]).div_rem(&[1., 0., 1.].into());
         assert_eq!(res, [0., -1., 1., 1.].into());
         assert_eq!(rem, [1., 1.].into());
 
-        let (res, rem) = long_div([1., 2., 3., 2., 1.].into(), &[1., 1., 1.].into());
+        let (res, rem) = Polynomial::from([1., 2., 3., 2., 1.]).div_rem(&[1., 1., 1.].into());
         assert_eq!(res, [1., 1., 1.].into());
         assert_eq!(rem, Polynomial::ZERO);
     }
@@ -426,10 +501,10 @@ mod tests {
 
     #[test]
     fn test_gcd() {
-        let res = gcd([0., -2., 1.].into(), [-4., -2., 0., 1.].into());
+        let res = Polynomial::from([0., -2., 1.]).gcd(&[-4., -2., 0., 1.].into());
         assert_eq!(res, [-4., 2.].into());
 
-        let res = gcd([4., -3., 1., -3., 1.].into(), [-1., 0., 0., 1.].into());
+        let res = Polynomial::from([4., -3., 1., -3., 1.]).gcd(&[-1., 0., 0., 1.].into());
         assert_eq!(res, [-3., 3.].into());
     }
 
@@ -441,9 +516,7 @@ mod tests {
         let a: Polynomial = [1., 2., 3., 2., 1.].into();
         assert_eq!(a.gsfd(), [1., 1., 1.].into());
 
-        // Not working at the moment because the calculations are numerically unstable.
-        // TODO: move to rational numbers?
-        // let a: Polynomial = [1875., -2000., -1025., 640., 425., 80., 5.].into(); // 5(x-1)^2(x+3)(x+5)^3
-        // assert_eq!(a.gsfd(), [-15., 7., 7., 1.].into()); // (x-1)(x+3)(x+5)
+        let a: Polynomial = [1875., -2000., -1025., 640., 425., 80., 5.].into(); // 5(x-1)^2(x+3)(x+5)^3
+        assert_eq!(a.gsfd(), [-15., 7., 7., 1.].into()); // (x-1)(x+3)(x+5)
     }
 }
