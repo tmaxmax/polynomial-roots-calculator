@@ -109,7 +109,7 @@ fn get_roots_biquadratic(p: &Polynomial) -> Option<Vec<Root>> {
 fn get_roots_palindrome(p: &Polynomial) -> Option<Vec<Root>> {
     return match p.grade() {
         g if g % 2 == 1 && p.is_palindrome() => {
-            let mut roots = find_roots(&p.div_rem(&[1., 1.].into()).0)?;
+            let mut roots = find_roots(&p.clone().div_rem(&[1., 1.].into()).0)?;
             if let Some(root) = roots.iter_mut().find(|r| r.value == -1.) {
                 root.multiplicity += 1
             } else {

@@ -25,11 +25,21 @@ impl Polynomial {
             .into()
     }
 
-    pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
+    pub fn div_rem(mut self, rhs: &Self) -> (Self, Self) {
+        if self.grade() == -1 {
+            return (self, Self::ZERO);
+        }
+
         match rhs.grade() {
             -1 => panic!("Division by 0"),
-            0 => (const_div(self, rhs[0]), Self::ZERO),
-            1 => horner_div(self, rhs),
+            0 => {
+                const_div(&mut self, rhs[0]);
+                (self, Self::ZERO)
+            }
+            1 => {
+                let (res, rem) = horner_div(self, rhs);
+                (res, if rem == 0. { Self::ZERO } else { [rem].into() })
+            }
             _ => todo!("Implement long division"),
         }
     }
@@ -258,40 +268,36 @@ fn sub_inv(lhs: &Polynomial, mut rhs: Polynomial) -> Polynomial {
     rhs
 }
 
-fn const_div(p: &Polynomial, a: f64) -> Polynomial {
-    p.iter().map(|(_, v)| v / a).collect::<Vec<_>>().into()
+fn const_div(lhs: &mut Polynomial, a: f64) {
+    lhs.0.iter_mut().for_each(|v| *v /= a);
 }
 
-fn horner_div(p: &Polynomial, rhs: &Polynomial) -> (Polynomial, Polynomial) {
-    let len = p.0.len();
-    let mut res = vec![0.; len];
-    res[len - 1] = p[(len - 1) as i32];
-
+fn horner_div(mut lhs: Polynomial, rhs: &Polynomial) -> (Polynomial, f64) {
     let a = -rhs[0] / rhs[1];
 
-    (0..len - 1)
+    (0..lhs.0.len() - 1)
         .rev()
-        .for_each(|k| res[k] = a * res[k + 1] + p[k as i32]);
+        .for_each(|k| lhs.0[k] += a * lhs.0[k + 1]);
 
-    res.rotate_left(1);
-    let rem = res.pop().unwrap();
+    lhs.0.rotate_left(1);
+    let rem = lhs.0.pop().unwrap();
 
     if rhs[1] != 1. {
-        res.iter_mut().for_each(|v| *v /= rhs[1]);
+        lhs.0.iter_mut().for_each(|v| *v /= rhs[1]);
     }
 
-    (res.into(), [rem].into())
+    (lhs, rem)
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
     fn test_horner() {
-        use super::*;
-
-        let (res, rem) = horner_div(&[2., 1., -2., 8.].into(), &[-1., 2.].into());
+        let (res, rem) = horner_div([2., 1., -2., 8.].into(), &[-1., 2.].into());
         assert_eq!(res, [1., 1., 4.].into());
-        assert_eq!(rem[0], 3.);
+        assert_eq!(rem, 3.);
     }
 
     #[test]
