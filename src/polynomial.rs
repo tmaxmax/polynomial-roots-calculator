@@ -231,6 +231,9 @@ fn const_div(lhs: &mut Polynomial, a: f64) {
     lhs.0.iter_mut().for_each(|v| *v /= a);
 }
 
+const ZERO: Rational32 = Rational32::new_raw(0, 1);
+const ONE: Rational32 = Rational32::new_raw(1, 1);
+
 fn horner_div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, Rational32) {
     let a = -rhs[0] / rhs[1];
 
@@ -242,7 +245,7 @@ fn horner_div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>,
     lhs.rotate_left(1);
     let rem = lhs.pop().unwrap();
 
-    if rhs[1] != Rational32::new(1, 1) {
+    if rhs[1] != ONE {
         lhs.iter_mut().for_each(|v| *v /= rhs[1]);
     }
 
@@ -257,7 +260,7 @@ fn long_div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, V
     }
 
     let res_g = init_l_grade - init_r_grade;
-    let mut res = vec![Rational32::default(); res_g + 1];
+    let mut res = vec![ZERO; res_g + 1];
 
     while lhs.len() >= rhs.len() {
         let l_g = lhs.len() - 1;
@@ -267,7 +270,7 @@ fn long_div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, V
         (0..=r_g).for_each(|k| lhs[l_g - k] -= c * rhs[r_g - k]);
 
         while let Some(v) = lhs.last() {
-            if *v != Rational32::default() {
+            if *v != ZERO {
                 break;
             }
 
@@ -285,14 +288,7 @@ fn div(lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, Vec<Ration
         0 | 1 => unreachable!(),
         2 => {
             let (res, rem) = horner_div(lhs, rhs);
-            (
-                res,
-                if rem == Rational32::default() {
-                    vec![]
-                } else {
-                    vec![rem]
-                },
-            )
+            (res, if rem == ZERO { vec![] } else { vec![rem] })
         }
         _ => long_div(lhs, rhs),
     }
@@ -313,8 +309,8 @@ fn gcd(mut r0: Vec<Rational32>, mut r1: Vec<Rational32>) -> Vec<Rational32> {
 }
 
 fn primitive(v: &mut [Rational32]) -> Rational32 {
-    let mut d = v.iter().fold(Rational32::default(), |acc, &v| gcd(acc, v));
-    if sgn(v.last().unwrap()) * sgn(&d) < 0 {
+    let mut d = v.iter().fold(ZERO, |acc, &v| gcd(acc, v));
+    if opposite_signs(v.last().unwrap(), &d) {
         d = -d;
     }
 
@@ -327,7 +323,7 @@ fn primitive(v: &mut [Rational32]) -> Rational32 {
             std::mem::swap(&mut a, &mut b);
         }
 
-        while b != Rational32::default() {
+        while b != ZERO {
             let rem = a % b;
             a = b;
             b = rem;
@@ -336,12 +332,8 @@ fn primitive(v: &mut [Rational32]) -> Rational32 {
         a
     }
 
-    fn sgn(r: &Rational32) -> i32 {
-        match r.cmp(&Rational32::default()) {
-            Ordering::Less => -1,
-            Ordering::Equal => 0,
-            Ordering::Greater => 1,
-        }
+    fn opposite_signs(a: &Rational32, b: &Rational32) -> bool {
+        (*a.numer() ^ *b.numer()) < 0
     }
 }
 
