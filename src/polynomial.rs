@@ -383,4 +383,10 @@ mod tests {
         let a: Polynomial = [1875., -2000., -1025., 640., 425., 80., 5.].into(); // 5(x-1)^2(x+3)(x+5)^3
         assert_eq!(a.gsfd(), [-15., 7., 7., 1.].into()); // (x-1)(x+3)(x+5)
     }
+
+    #[test]
+    fn test_primitive() {
+        let a: Polynomial = [2., -4., -4.].into();
+        assert_eq!(a.primitive(), ([-1., 2., 2.].into(), -2.));
+    }
 }
