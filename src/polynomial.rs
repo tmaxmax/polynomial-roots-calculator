@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Write},
-    ops::{self, Add, Sub},
+    ops::{self, Add, Neg, Sub},
 };
 
 use crate::float::Float;
@@ -181,6 +181,23 @@ impl Sub<Polynomial> for Polynomial {
 
     fn sub(self, rhs: Polynomial) -> Self::Output {
         sub(self, &rhs)
+    }
+}
+
+impl Neg for Polynomial {
+    type Output = Polynomial;
+
+    fn neg(mut self) -> Self::Output {
+        self.0.iter_mut().for_each(|v| *v = -*v);
+        self
+    }
+}
+
+impl Neg for &Polynomial {
+    type Output = Polynomial;
+
+    fn neg(self) -> Self::Output {
+        self.0.iter().map(|v| -v).collect::<Vec<_>>().into()
     }
 }
 
