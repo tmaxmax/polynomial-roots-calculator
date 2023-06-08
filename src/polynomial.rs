@@ -72,6 +72,10 @@ where
             panic!("Too many coefficients");
         }
 
+        if v.iter().any(|v| !v.is_finite()) {
+            panic!("Coefficients are not finite floats");
+        }
+
         if v.len() == 1 && v[0] == 0. {
             return Self::ZERO;
         }
