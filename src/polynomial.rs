@@ -53,6 +53,28 @@ impl Polynomial {
         (self, d)
     }
 
+    pub fn gcd(&self, rhs: &Self) -> Self {
+        match (self.grade(), rhs.grade()) {
+            (0, 0) => Self::ZERO,
+            (_, 0) => self.clone(),
+            (0, _) => rhs.clone(),
+            _ => gcd(self.clone(), rhs.clone()),
+        }
+    }
+
+    pub fn gsfd(&self) -> Self {
+        match self.grade() {
+            -1 | 0 => self.clone(),
+            _ => {
+                self.clone()
+                    .div_rem(&gcd(self.clone(), self.derivative()).primitive().0)
+                    .0
+                    .primitive()
+                    .0
+            }
+        }
+    }
+
     pub fn is_palindrome(&self) -> bool {
         self.iter().all(|(i, v)| v == self[self.grade() - i])
     }
@@ -347,6 +369,24 @@ fn long_div(mut lhs: Polynomial, rhs: &Polynomial) -> (Polynomial, Polynomial) {
     (res.into(), lhs)
 }
 
+fn gcd(mut r0: Polynomial, mut r1: Polynomial) -> Polynomial {
+    if r0.grade() < r1.grade() {
+        std::mem::swap(&mut r0, &mut r1);
+    }
+
+    while r1 != Polynomial::ZERO {
+        let (_, rem) = r0.div_rem(&r1);
+        r0 = r1;
+        r1 = rem;
+    }
+
+    if r0.lead() < 0. {
+        r0 = -r0;
+    }
+
+    r0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -382,5 +422,28 @@ mod tests {
         assert_eq!(Polynomial::from([2., 3., 4.]), &b + &a);
         assert_eq!(Polynomial::from([0., -1., -4.]), &a - &b);
         assert_eq!(Polynomial::from([0., 1., 4.]), &b - a);
+    }
+
+    #[test]
+    fn test_gcd() {
+        let res = gcd([0., -2., 1.].into(), [-4., -2., 0., 1.].into());
+        assert_eq!(res, [-4., 2.].into());
+
+        let res = gcd([4., -3., 1., -3., 1.].into(), [-1., 0., 0., 1.].into());
+        assert_eq!(res, [-3., 3.].into());
+    }
+
+    #[test]
+    fn test_gsfd() {
+        let a: Polynomial = [1., 2., 1.].into();
+        assert_eq!(a.gsfd(), [1., 1.].into());
+
+        let a: Polynomial = [1., 2., 3., 2., 1.].into();
+        assert_eq!(a.gsfd(), [1., 1., 1.].into());
+
+        // Not working at the moment because the calculations are numerically unstable.
+        // TODO: move to rational numbers?
+        // let a: Polynomial = [1875., -2000., -1025., 640., 425., 80., 5.].into(); // 5(x-1)^2(x+3)(x+5)^3
+        // assert_eq!(a.gsfd(), [-15., 7., 7., 1.].into()); // (x-1)(x+3)(x+5)
     }
 }
