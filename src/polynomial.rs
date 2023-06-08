@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Write},
-    ops::{self, Add, Neg, Sub},
+    ops::{Add, Index, Neg, Sub},
 };
 
 use crate::float::Float;
@@ -92,7 +92,7 @@ where
     }
 }
 
-impl ops::Index<i32> for Polynomial {
+impl Index<i32> for Polynomial {
     type Output = f64;
 
     fn index(&self, i: i32) -> &Self::Output {
