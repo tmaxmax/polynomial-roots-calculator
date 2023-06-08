@@ -46,6 +46,13 @@ impl Polynomial {
         self[self.grade()]
     }
 
+    pub fn primitive(mut self) -> (Polynomial, f64) {
+        let d = self.0.iter().fold(0., |acc, v| acc.gcd(*v));
+        self.0.iter_mut().for_each(|v| *v /= d);
+
+        (self, d)
+    }
+
     pub fn is_palindrome(&self) -> bool {
         self.iter().all(|(i, v)| v == self[self.grade() - i])
     }
