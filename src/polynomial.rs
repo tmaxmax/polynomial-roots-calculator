@@ -51,11 +51,14 @@ impl Polynomial {
         self[self.grade()]
     }
 
-    pub fn primitive(mut self) -> (Polynomial, f64) {
-        let d = self.0.iter().fold(0., |acc, v| acc.gcd(*v));
-        self.0.iter_mut().for_each(|v| *v /= d);
+    pub fn primitive(&self) -> (Polynomial, f64) {
+        let mut r = self.to_ratios();
+        let d = primitive(&mut r);
 
-        (self, d)
+        (
+            Polynomial::from_ratios(&r),
+            *d.numer() as f64 / *d.denom() as f64,
+        )
     }
 
     pub fn gcd(&self, rhs: &Self) -> Self {
