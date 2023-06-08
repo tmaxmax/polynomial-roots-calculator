@@ -86,6 +86,26 @@ impl Polynomial {
         self.iter().all(|(i, v)| v == self[self.grade() - i])
     }
 
+    pub fn root_bound(&self) -> Option<f64> {
+        let n = self.grade();
+        let lead_abs = self.lead().abs();
+        let k = lead_abs.log2().ceil() as i32;
+
+        (1..=n)
+            .map(|i| {
+                let h = self[n - i].abs().log2().ceil() as i32;
+                let l = (h - k - 1) / i;
+
+                if (k - h) % i == 2 % i {
+                    l + 3
+                } else {
+                    l + 2
+                }
+            })
+            .max()
+            .map(|v| 2f64.powi(v))
+    }
+
     fn coef_ref(&self, i: i32) -> Option<&f64> {
         self.0.get(i as usize).or_else(|| {
             if i == 0 && self.grade() == -1 {
