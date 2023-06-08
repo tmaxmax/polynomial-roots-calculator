@@ -7,7 +7,7 @@ pub const TOLERANCE: f64 = 1e-15;
 
 impl Float for f64 {
     fn near_zero(self) -> bool {
-        self < TOLERANCE
+        -TOLERANCE < self && self < TOLERANCE
     }
 
     fn negate(self) -> f64 {
