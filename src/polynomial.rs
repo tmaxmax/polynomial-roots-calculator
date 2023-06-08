@@ -107,14 +107,16 @@ impl Polynomial {
         self.0
             .iter()
             .map(|&v| -> Result<_, Box<dyn Error>> {
-                let r = BigRational::from_float(v).expect("float must be finite");
+                // SAFETY: Polynomials can only be created with finite coefficients.
+                // `from_float` returns `None` only if the input is not finite.
+                let r = unsafe { BigRational::from_float(v).unwrap_unchecked() };
                 let n: i32 = r.numer().try_into()?;
                 let d: i32 = r.denom().try_into()?;
 
                 Ok(Rational32::new(n, d))
             })
             .collect::<Result<Vec<_>, _>>()
-            .unwrap()
+            .expect("ratios too big")
     }
 
     fn from_ratios(r: &[Rational32]) -> Self {
