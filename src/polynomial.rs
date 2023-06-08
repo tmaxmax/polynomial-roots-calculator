@@ -327,9 +327,11 @@ fn long_div(mut lhs: Polynomial, rhs: &Polynomial) -> (Polynomial, Polynomial) {
     while lhs.grade() >= rhs.grade() {
         let l_g = lhs.grade() as usize;
         let r_g = rhs.grade() as usize;
-        let c = lhs.0[l_g] / rhs.0[r_g];
+        let a = lhs.0[l_g];
+        let b = rhs.0[r_g];
+        let c = a / b;
 
-        (0..=r_g).for_each(|k| lhs.0[l_g - k] -= c * rhs.0[r_g - k]);
+        (0..=r_g).for_each(|k| lhs.0[l_g - k] -= a * rhs.0[r_g - k] / b);
 
         while let Some(v) = lhs.0.last() {
             if !v.near_zero() {
