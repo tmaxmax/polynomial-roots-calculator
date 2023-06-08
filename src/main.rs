@@ -5,6 +5,7 @@ mod polynomial;
 mod roots;
 
 use anyhow::Result;
+use polynomial::Polynomial;
 use roots::{find_roots, Root};
 use std::{
     env,
@@ -49,11 +50,15 @@ fn interactive_prompt(stdin: &mut io::StdinLock, stdout: &mut io::StdoutLock) ->
                 continue;
             }
         };
+        let p: Polynomial = coefs.into();
 
         writeln!(
             stdout,
-            "{}\n\nInput coefficients or \"exit\" to close the program.",
-            format_output_interactive(find_roots(&coefs.into()).as_deref())
+            "Polynomial: {}\nDerivative: {}\nRoot bound: {}\nRoots: {}\n\nInput coefficients or \"exit\" to close the program.",
+            p,
+            p.derivative(),
+            p.root_bound().map_or("none".into(), |v| format!("±{v} (approx.)")),
+            format_output_interactive(find_roots(&p).as_deref())
         )?;
     }
 }
