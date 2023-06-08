@@ -42,6 +42,10 @@ impl Polynomial {
         }
     }
 
+    pub fn lead(&self) -> f64 {
+        self[self.grade()]
+    }
+
     pub fn is_palindrome(&self) -> bool {
         self.iter().all(|(i, v)| v == self[self.grade() - i])
     }
