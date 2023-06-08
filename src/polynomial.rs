@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Write},
-    ops,
+    ops::{self, Add, Sub},
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -112,6 +112,70 @@ impl Fn<(f64,)> for Polynomial {
     }
 }
 
+impl Add<&Polynomial> for &Polynomial {
+    type Output = Polynomial;
+
+    fn add(self, rhs: &Polynomial) -> Self::Output {
+        add(self.clone(), rhs)
+    }
+}
+
+impl Add<&Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn add(self, rhs: &Polynomial) -> Self::Output {
+        add(self, rhs)
+    }
+}
+
+impl Add<Polynomial> for &Polynomial {
+    type Output = Polynomial;
+
+    fn add(self, rhs: Polynomial) -> Self::Output {
+        add(rhs, self)
+    }
+}
+
+impl Add<Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn add(self, rhs: Polynomial) -> Self::Output {
+        add(self, &rhs)
+    }
+}
+
+impl Sub<&Polynomial> for &Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, rhs: &Polynomial) -> Self::Output {
+        sub(self.clone(), rhs)
+    }
+}
+
+impl Sub<&Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, rhs: &Polynomial) -> Self::Output {
+        sub(self, rhs)
+    }
+}
+
+impl Sub<Polynomial> for &Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, rhs: Polynomial) -> Self::Output {
+        sub_inv(self, rhs)
+    }
+}
+
+impl Sub<Polynomial> for Polynomial {
+    type Output = Polynomial;
+
+    fn sub(self, rhs: Polynomial) -> Self::Output {
+        sub(self, &rhs)
+    }
+}
+
 impl fmt::Display for Polynomial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.grade() == -1 {
@@ -155,6 +219,45 @@ fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String
     Some(ret)
 }
 
+fn add(mut lhs: Polynomial, rhs: &Polynomial) -> Polynomial {
+    lhs.0
+        .iter_mut()
+        .zip(rhs.0.iter())
+        .for_each(|(v, r)| *v += r);
+
+    if rhs.grade() > lhs.grade() {
+        lhs.0.extend(rhs.0.iter().skip(lhs.0.len()));
+    }
+
+    lhs
+}
+
+fn sub(mut lhs: Polynomial, rhs: &Polynomial) -> Polynomial {
+    lhs.0
+        .iter_mut()
+        .zip(rhs.0.iter())
+        .for_each(|(l, r)| *l -= r);
+
+    if rhs.grade() > lhs.grade() {
+        lhs.0.extend(rhs.0.iter().skip(lhs.0.len()).map(|v| -v));
+    }
+
+    lhs
+}
+
+fn sub_inv(lhs: &Polynomial, mut rhs: Polynomial) -> Polynomial {
+    rhs.0
+        .iter_mut()
+        .zip(lhs.0.iter())
+        .for_each(|(r, l)| *r = l - *r);
+
+    if lhs.grade() > rhs.grade() {
+        rhs.0.extend(lhs.0.iter().skip(rhs.0.len()));
+    }
+
+    rhs
+}
+
 fn const_div(p: &Polynomial, a: f64) -> Polynomial {
     p.iter().map(|(_, v)| v / a).collect::<Vec<_>>().into()
 }
@@ -189,5 +292,16 @@ mod tests {
         let (res, rem) = horner_div(&[2., 1., -2., 8.].into(), &[-1., 2.].into());
         assert_eq!(res, [1., 1., 4.].into());
         assert_eq!(rem[0], 3.);
+    }
+
+    #[test]
+    fn test_add_sub() {
+        let a: Polynomial = [1., 1.].into();
+        let b: Polynomial = [1., 2., 4.].into();
+
+        assert_eq!(Polynomial::from([2., 3., 4.]), &a + &b);
+        assert_eq!(Polynomial::from([2., 3., 4.]), &b + &a);
+        assert_eq!(Polynomial::from([0., -1., -4.]), &a - &b);
+        assert_eq!(Polynomial::from([0., 1., 4.]), &b - a);
     }
 }
