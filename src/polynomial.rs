@@ -2,7 +2,7 @@ use std::{
     cmp::Ordering,
     error::Error,
     fmt::{self, Write},
-    ops::{Add, Index, Neg, Sub},
+    ops::Index,
 };
 
 use num_rational::{BigRational, Rational32};
@@ -181,87 +181,6 @@ impl Fn<(f64,)> for Polynomial {
     }
 }
 
-impl Add<&Polynomial> for &Polynomial {
-    type Output = Polynomial;
-
-    fn add(self, rhs: &Polynomial) -> Self::Output {
-        add(self.clone(), rhs)
-    }
-}
-
-impl Add<&Polynomial> for Polynomial {
-    type Output = Polynomial;
-
-    fn add(self, rhs: &Polynomial) -> Self::Output {
-        add(self, rhs)
-    }
-}
-
-impl Add<Polynomial> for &Polynomial {
-    type Output = Polynomial;
-
-    fn add(self, rhs: Polynomial) -> Self::Output {
-        add(rhs, self)
-    }
-}
-
-impl Add<Polynomial> for Polynomial {
-    type Output = Polynomial;
-
-    fn add(self, rhs: Polynomial) -> Self::Output {
-        add(self, &rhs)
-    }
-}
-
-impl Sub<&Polynomial> for &Polynomial {
-    type Output = Polynomial;
-
-    fn sub(self, rhs: &Polynomial) -> Self::Output {
-        sub(self.clone(), rhs)
-    }
-}
-
-impl Sub<&Polynomial> for Polynomial {
-    type Output = Polynomial;
-
-    fn sub(self, rhs: &Polynomial) -> Self::Output {
-        sub(self, rhs)
-    }
-}
-
-impl Sub<Polynomial> for &Polynomial {
-    type Output = Polynomial;
-
-    fn sub(self, rhs: Polynomial) -> Self::Output {
-        sub_inv(self, rhs)
-    }
-}
-
-impl Sub<Polynomial> for Polynomial {
-    type Output = Polynomial;
-
-    fn sub(self, rhs: Polynomial) -> Self::Output {
-        sub(self, &rhs)
-    }
-}
-
-impl Neg for Polynomial {
-    type Output = Polynomial;
-
-    fn neg(mut self) -> Self::Output {
-        self.0.iter_mut().for_each(|v| *v = -*v);
-        self
-    }
-}
-
-impl Neg for &Polynomial {
-    type Output = Polynomial;
-
-    fn neg(self) -> Self::Output {
-        self.0.iter().map(|v| -v).collect::<Vec<_>>().into()
-    }
-}
-
 impl fmt::Display for Polynomial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.grade() == -1 {
@@ -303,45 +222,6 @@ fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String
     }
 
     Some(ret)
-}
-
-fn add(mut lhs: Polynomial, rhs: &Polynomial) -> Polynomial {
-    lhs.0
-        .iter_mut()
-        .zip(rhs.0.iter())
-        .for_each(|(v, r)| *v += r);
-
-    if rhs.grade() > lhs.grade() {
-        lhs.0.extend(rhs.0.iter().skip(lhs.0.len()));
-    }
-
-    lhs
-}
-
-fn sub(mut lhs: Polynomial, rhs: &Polynomial) -> Polynomial {
-    lhs.0
-        .iter_mut()
-        .zip(rhs.0.iter())
-        .for_each(|(l, r)| *l -= r);
-
-    if rhs.grade() > lhs.grade() {
-        lhs.0.extend(rhs.0.iter().skip(lhs.0.len()).map(|v| -v));
-    }
-
-    lhs
-}
-
-fn sub_inv(lhs: &Polynomial, mut rhs: Polynomial) -> Polynomial {
-    rhs.0
-        .iter_mut()
-        .zip(lhs.0.iter())
-        .for_each(|(r, l)| *r = l - *r);
-
-    if lhs.grade() > rhs.grade() {
-        rhs.0.extend(lhs.0.iter().skip(rhs.0.len()));
-    }
-
-    rhs
 }
 
 fn const_div(lhs: &mut Polynomial, a: f64) {
@@ -486,17 +366,6 @@ mod tests {
         let (res, rem) = Polynomial::from([1., 2., 3., 2., 1.]).div_rem(&[1., 1., 1.].into());
         assert_eq!(res, [1., 1., 1.].into());
         assert_eq!(rem, Polynomial::ZERO);
-    }
-
-    #[test]
-    fn test_add_sub() {
-        let a: Polynomial = [1., 1.].into();
-        let b: Polynomial = [1., 2., 4.].into();
-
-        assert_eq!(Polynomial::from([2., 3., 4.]), &a + &b);
-        assert_eq!(Polynomial::from([2., 3., 4.]), &b + &a);
-        assert_eq!(Polynomial::from([0., -1., -4.]), &a - &b);
-        assert_eq!(Polynomial::from([0., 1., 4.]), &b - a);
     }
 
     #[test]
