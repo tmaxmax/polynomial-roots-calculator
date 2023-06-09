@@ -25,19 +25,8 @@ impl Polynomial {
     }
 
     pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
-        match rhs.grade() {
-            -1 => panic!("Division by 0"),
-            0 => {
-                let mut res = self.clone();
-                const_div(&mut res, rhs[0]);
-
-                (res, Self::ZERO)
-            }
-            _ => {
-                let (res, rem) = div(self.to_ratios(), &rhs.to_ratios());
-                (Polynomial::from_ratios(res), Polynomial::from_ratios(rem))
-            }
-        }
+        let (res, rem) = div(self.to_ratios(), &rhs.to_ratios());
+        (Polynomial::from_ratios(res), Polynomial::from_ratios(rem))
     }
 
     pub fn lead(&self) -> f64 {
@@ -235,10 +224,6 @@ fn format_coefficient(v: f64, pow: i32, var: &str, first: bool) -> Option<String
     Some(ret)
 }
 
-fn const_div(lhs: &mut Polynomial, a: f64) {
-    lhs.0.iter_mut().for_each(|v| *v /= a);
-}
-
 const ZERO: Rational32 = Rational32::new_raw(0, 1);
 const ONE: Rational32 = Rational32::new_raw(1, 1);
 
@@ -291,9 +276,13 @@ fn long_div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, V
     (res, lhs)
 }
 
-fn div(lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, Vec<Rational32>) {
-    match lhs.len() {
-        0 | 1 => unreachable!(),
+fn div(mut lhs: Vec<Rational32>, rhs: &[Rational32]) -> (Vec<Rational32>, Vec<Rational32>) {
+    match rhs.len() {
+        0 => panic!("Division by 0"),
+        1 => {
+            lhs.iter_mut().for_each(|v| *v /= rhs[0]);
+            (lhs, vec![])
+        }
         2 => {
             let (res, rem) = horner_div(lhs, rhs);
             (res, if rem == ZERO { vec![] } else { vec![rem] })
@@ -380,6 +369,9 @@ mod tests {
 
         let res = Polynomial::from([4., -3., 1., -3., 1.]).gcd(&[-1., 0., 0., 1.].into());
         assert_eq!(res, [-1., 1.].into());
+
+        let res = Polynomial::from([1., 1., 1.]).gcd(&[1., 2., 1.].into());
+        assert_eq!(res, [1.].into());
     }
 
     #[test]
