@@ -1,4 +1,6 @@
-#![feature(unboxed_closures, fn_traits, iter_intersperse)]
+#![feature(unboxed_closures, fn_traits, iter_intersperse, test)]
+
+extern crate test;
 
 mod float;
 mod polynomial;

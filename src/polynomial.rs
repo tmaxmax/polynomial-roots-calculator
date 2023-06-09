@@ -1,10 +1,10 @@
 use std::{
-    error::Error,
     fmt::{self, Write},
     ops::Index,
 };
 
-use num_rational::{BigRational, Rational32};
+use num_rational::Rational32;
+use num_traits::FromPrimitive;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial(Vec<f64>);
@@ -125,24 +125,17 @@ impl Polynomial {
     fn to_ratios(&self) -> Vec<Rational32> {
         self.0
             .iter()
-            .map(|&v| -> Result<_, Box<dyn Error>> {
-                // SAFETY: Polynomials can only be created with finite coefficients.
-                // `from_float` returns `None` only if the input is not finite.
-                let r = unsafe { BigRational::from_float(v).unwrap_unchecked() };
-                let n: i32 = r.numer().try_into()?;
-                let d: i32 = r.denom().try_into()?;
-
-                Ok(Rational32::new(n, d))
-            })
-            .collect::<Result<Vec<_>, _>>()
-            .expect("ratios too big")
+            .map(|&v| Rational32::from_f64(v))
+            .collect::<Option<_>>()
+            .expect("values too big")
     }
 
     fn from_ratios(r: Vec<Rational32>) -> Self {
-        r.into_iter()
-            .map(|v| *v.numer() as f64 / *v.denom() as f64)
-            .collect::<Vec<_>>()
-            .into()
+        Self(
+            r.into_iter()
+                .map(|v| *v.numer() as f64 / *v.denom() as f64)
+                .collect(),
+        )
     }
 }
 
@@ -409,5 +402,35 @@ mod tests {
     fn test_primitive() {
         let a: Polynomial = [2., -4., -4.].into();
         assert_eq!(a.primitive(), ([-1., 2., 2.].into(), -2.));
+    }
+
+    use rand::Rng;
+
+    #[bench]
+    fn bench_to_rational(b: &mut test::Bencher) {
+        let p = Polynomial(
+            rand::thread_rng()
+                .sample_iter(rand::distributions::Uniform::from(-1000..1000))
+                .map(|v| v as f64)
+                .take(1000)
+                .collect(),
+        );
+
+        b.iter(|| p.to_ratios());
+    }
+
+    #[bench]
+    fn bench_from_rational(b: &mut test::Bencher) {
+        let mut rng = rand::thread_rng();
+        let r: Vec<_> = std::iter::from_fn(|| {
+            Some(Rational32::new_raw(
+                rng.gen_range(-1000..1000),
+                rng.gen_range(1..1000),
+            ))
+        })
+        .take(1000)
+        .collect();
+
+        b.iter(|| Polynomial::from_ratios(r.clone()))
     }
 }
