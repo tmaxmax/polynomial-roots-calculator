@@ -324,6 +324,8 @@ fn gcd(mut r0: Vec<Rational32>, mut r1: Vec<Rational32>) -> Vec<Rational32> {
         r1 = rem;
     }
 
+    primitive(&mut r0);
+
     r0
 }
 
@@ -385,10 +387,10 @@ mod tests {
     #[test]
     fn test_gcd() {
         let res = Polynomial::from([0., -2., 1.]).gcd(&[-4., -2., 0., 1.].into());
-        assert_eq!(res, [-4., 2.].into());
+        assert_eq!(res, [-2., 1.].into());
 
         let res = Polynomial::from([4., -3., 1., -3., 1.]).gcd(&[-1., 0., 0., 1.].into());
-        assert_eq!(res, [-3., 3.].into());
+        assert_eq!(res, [-1., 1.].into());
     }
 
     #[test]
