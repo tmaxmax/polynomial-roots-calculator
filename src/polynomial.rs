@@ -54,12 +54,12 @@ impl Polynomial {
 
     pub fn gsfd(&self) -> Self {
         match self.grade() {
-            -1 | 0 => self.clone(),
+            -1 | 0 | 1 => self.clone(),
             _ => {
                 let s = self.to_ratios();
                 let g = gcd(s.clone(), self.derivative().to_ratios());
 
-                let mut res = long_div(s, &g).0;
+                let mut res = div(s, &g).0;
                 primitive(&mut res);
 
                 Polynomial::from_ratios(res)
