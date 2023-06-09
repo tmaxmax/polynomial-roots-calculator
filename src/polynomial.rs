@@ -39,7 +39,7 @@ impl Polynomial {
             }
             _ => {
                 let (res, rem) = div(self.to_ratios(), &rhs.to_ratios());
-                (Polynomial::from_ratios(&res), Polynomial::from_ratios(&rem))
+                (Polynomial::from_ratios(res), Polynomial::from_ratios(rem))
             }
         }
     }
@@ -53,7 +53,7 @@ impl Polynomial {
         let d = primitive(&mut r);
 
         (
-            Polynomial::from_ratios(&r),
+            Polynomial::from_ratios(r),
             *d.numer() as f64 / *d.denom() as f64,
         )
     }
@@ -63,7 +63,7 @@ impl Polynomial {
             (0, 0) => Self::ZERO,
             (_, 0) => self.clone(),
             (0, _) => rhs.clone(),
-            _ => Self::from_ratios(&gcd(self.to_ratios(), rhs.to_ratios())),
+            _ => Self::from_ratios(gcd(self.to_ratios(), rhs.to_ratios())),
         }
     }
 
@@ -77,7 +77,7 @@ impl Polynomial {
                 let mut res = long_div(s, &g).0;
                 primitive(&mut res);
 
-                Polynomial::from_ratios(&res)
+                Polynomial::from_ratios(res)
             }
         }
     }
@@ -138,8 +138,8 @@ impl Polynomial {
             .expect("ratios too big")
     }
 
-    fn from_ratios(r: &[Rational32]) -> Self {
-        r.iter()
+    fn from_ratios(r: Vec<Rational32>) -> Self {
+        r.into_iter()
             .map(|v| *v.numer() as f64 / *v.denom() as f64)
             .collect::<Vec<_>>()
             .into()
