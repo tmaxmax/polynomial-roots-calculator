@@ -21,11 +21,7 @@ impl Polynomial {
     }
 
     pub fn derivative(&self) -> Self {
-        self.iter()
-            .skip(1)
-            .map(|(i, v)| (i as f64) * v)
-            .collect::<Vec<_>>()
-            .into()
+        Self(self.iter().skip(1).map(|(i, v)| (i as f64) * v).collect())
     }
 
     pub fn div_rem(&self, rhs: &Self) -> (Self, Self) {
