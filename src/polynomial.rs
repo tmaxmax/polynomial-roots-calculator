@@ -6,6 +6,8 @@ use std::{
 use num_rational::Rational32;
 use num_traits::FromPrimitive;
 
+use crate::float::Float;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Polynomial(Vec<f64>);
 
@@ -73,22 +75,29 @@ impl Polynomial {
 
     pub fn root_bound(&self) -> Option<f64> {
         let n = self.grade();
+        if n <= 0 {
+            return None;
+        }
+
         let lead_abs = self.lead().abs();
-        let k = lead_abs.log2().ceil() as i32;
+        let k = lead_abs.ilog2f() + 1;
 
         (1..=n)
+            .filter(|i| self[n - i] != 0.)
             .map(|i| {
-                let h = self[n - i].abs().log2().ceil() as i32;
-                let l = (h - k - 1) / i;
+                let abs = self[n - i].abs();
+                let h = abs.ilog2f() + 1;
+                let mut e = (h - k - 1) / i + 1;
 
-                if (k - h) % i == 2 % i {
-                    l + 3
-                } else {
-                    l + 2
+                if (k - h) % i == 2 % i && 2f64.powi(e * i) * lead_abs < abs {
+                    e += 1;
                 }
+
+                e
             })
             .max()
-            .map(|v| 2f64.powi(v))
+            .map(|e| 2f64.powi(e + 1))
+            .or(Some(f64::EPSILON))
     }
 
     fn coef_ref(&self, i: i32) -> Option<&f64> {
